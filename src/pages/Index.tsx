@@ -1,26 +1,19 @@
 import { useState, useEffect, useCallback } from 'react';
 import Icon from '@/components/ui/icon';
 import {
-  TEAMS, PLAYERS, INITIAL_MATCHES, getTeam, formatTime,
+  TEAMS, PLAYERS, INITIAL_MATCHES, getTeam, formatTime, PLAYER_NAMES,
   type Match, type Division,
 } from '@/data/usl-data';
-
-const PLAYER_NAMES_POOL = [
-  'Воронов', 'Садиков', 'Крылов', 'Ларин', 'Антонов',
-  'Петров', 'Фёдоров', 'Казаков', 'Баранов', 'Тихонов',
-  'Зайцев', 'Щербаков', 'Соколов', 'Кузнецов', 'Максимов',
-  'Иванов', 'Смирнов', 'Попов', 'Новиков', 'Морозов',
-];
 
 type NavSection = 'live' | 'stats' | 'schedule' | 'projects' | 'about' | 'news';
 
 const NAV_ITEMS: { id: NavSection; label: string; icon: string }[] = [
-  { id: 'live', label: 'Лайв', icon: 'Radio' },
-  { id: 'stats', label: 'Статистика', icon: 'BarChart3' },
-  { id: 'schedule', label: 'Расписание', icon: 'Calendar' },
-  { id: 'projects', label: 'Проекты', icon: 'Layers' },
-  { id: 'about', label: 'О лиге', icon: 'Info' },
-  { id: 'news', label: 'Новости', icon: 'Newspaper' },
+  { id: 'live',     label: 'Live',        icon: 'Radio'     },
+  { id: 'stats',    label: 'Stats',       icon: 'BarChart3' },
+  { id: 'schedule', label: 'Schedule',    icon: 'Calendar'  },
+  { id: 'projects', label: 'Projects',    icon: 'Layers'    },
+  { id: 'about',    label: 'About',       icon: 'Info'      },
+  { id: 'news',     label: 'News',        icon: 'Newspaper' },
 ];
 
 function rnd(min: number, max: number) {
@@ -31,21 +24,31 @@ function generateLiveEvent(match: Match): string {
   const home = getTeam(match.homeTeamId);
   const away = getTeam(match.awayTeamId);
   const team = Math.random() > 0.5 ? home : away;
-  const player = PLAYER_NAMES_POOL[rnd(0, PLAYER_NAMES_POOL.length - 1)];
+  const player = PLAYER_NAMES[rnd(0, PLAYER_NAMES.length - 1)];
   const events = [
-    `${team?.shortName} — удар в створ!`,
-    `${player} получает жёлтую карточку`,
-    `${team?.shortName} — угловой`,
-    `Офсайд у ${team?.shortName}`,
-    `${player} — опасный момент!`,
-    `${team?.shortName} атакует через левый фланг`,
-    `Нарушение правил в середине поля`,
-    `${player} — штрафной на подходе к штрафной`,
-    `${team?.shortName} — удар выше ворот`,
-    `Вратарь ${team?.shortName} берёт сложный мяч`,
+    `${team?.shortName} — shot on target`,
+    `${player} receives a yellow card`,
+    `${team?.shortName} — corner kick`,
+    `Offside called against ${team?.shortName}`,
+    `${player} — dangerous chance`,
+    `${team?.shortName} pressing through the left flank`,
+    `Foul in midfield`,
+    `${player} — free kick near the box`,
+    `${team?.shortName} — shot over the bar`,
+    `Goalkeeper ${team?.shortName} makes a save`,
   ];
   return events[rnd(0, events.length - 1)];
 }
+
+const EVENT_ICONS: Record<string, string> = {
+  goal: 'G',
+  yellow: 'Y',
+  red: 'R',
+  save: 'S',
+  miss: '-',
+  substitution: 'SUB',
+  penalty: 'P',
+};
 
 function MatchCard({ match, expanded, onToggle }: {
   match: Match;
@@ -75,7 +78,7 @@ function MatchCard({ match, expanded, onToggle }: {
               match.status === 'upcoming' ? 'text-[#00f6ac]' : 'text-[#333]'
             }`}>
               {match.status === 'live' ? `${match.minute}'` :
-               match.status === 'upcoming' ? formatTime(match.scheduledTime) : 'ФТ'}
+               match.status === 'upcoming' ? formatTime(match.scheduledTime) : 'FT'}
             </span>
           </div>
           <span className="font-mono text-[#222] text-[10px]">
@@ -83,14 +86,13 @@ function MatchCard({ match, expanded, onToggle }: {
           </span>
           {match.status === 'live' && (
             <span className="ml-auto font-mono text-[10px] text-[#333]">
-              {match.shots[0]}–{match.shots[1]} уд.
+              {match.shots[0]}–{match.shots[1]} shots
             </span>
           )}
         </div>
 
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3 flex-1 min-w-0">
-            <span className="text-xl shrink-0">{home?.logo}</span>
             <span className="font-body text-white font-medium text-sm truncate">{home?.name}</span>
           </div>
 
@@ -106,36 +108,46 @@ function MatchCard({ match, expanded, onToggle }: {
 
           <div className="flex items-center gap-3 flex-1 min-w-0 justify-end">
             <span className="font-body text-white font-medium text-sm truncate text-right">{away?.name}</span>
-            <span className="text-xl shrink-0">{away?.logo}</span>
           </div>
         </div>
 
         {match.status === 'live' && (
-          <div className="mt-3 flex items-center gap-3 text-xs">
-            <span className="font-mono text-[#444] text-[10px] shrink-0">{match.possession[0]}%</span>
+          <div className="mt-3 flex items-center gap-3">
+            <span className="font-mono text-[#444] text-[10px] shrink-0 w-8">{match.possession[0]}%</span>
             <div className="flex-1 bg-[#111] h-1 rounded-full overflow-hidden">
               <div
                 className="h-full bg-[#00f6ac99] rounded-full transition-all duration-1000"
                 style={{ width: `${match.possession[0]}%` }}
               />
             </div>
-            <span className="font-mono text-[#444] text-[10px] shrink-0">{match.possession[1]}%</span>
+            <span className="font-mono text-[#444] text-[10px] shrink-0 w-8 text-right">{match.possession[1]}%</span>
           </div>
         )}
       </div>
 
       {expanded && match.events.length > 0 && (
         <div className="border-t border-[#111] px-4 py-3 space-y-1.5">
-          <div className="font-mono text-[10px] text-[#333] tracking-widest mb-2">СОБЫТИЯ МАТЧА</div>
-          {match.events.map((ev, i) => (
-            <div key={i} className="flex items-center gap-3 text-xs">
-              <span className="font-mono text-[#00f6ac] w-8 shrink-0">{ev.minute}'</span>
-              <span className="text-sm shrink-0">
-                {ev.type === 'goal' ? '⚽' : ev.type === 'yellow' ? '🟨' : ev.type === 'red' ? '🟥' : ev.type === 'save' ? '🧤' : '◌'}
-              </span>
-              <span className="font-body text-[#666]">{ev.playerName} — {ev.description}</span>
-            </div>
-          ))}
+          <div className="font-mono text-[10px] text-[#333] tracking-widest mb-2">MATCH EVENTS</div>
+          {match.events.map((ev, i) => {
+            const evHome = getTeam(match.homeTeamId);
+            const evAway = getTeam(match.awayTeamId);
+            const teamName = ev.teamId === match.homeTeamId ? evHome?.shortName : evAway?.shortName;
+            return (
+              <div key={i} className="flex items-center gap-3 text-xs">
+                <span className="font-mono text-[#00f6ac] w-8 shrink-0">{ev.minute}'</span>
+                <span className={`font-mono text-[10px] px-1 py-0.5 shrink-0 ${
+                  ev.type === 'goal' ? 'bg-[#00f6ac22] text-[#00f6ac]' :
+                  ev.type === 'yellow' ? 'bg-yellow-500/20 text-yellow-400' :
+                  ev.type === 'red' ? 'bg-red-500/20 text-red-400' :
+                  'bg-[#1a1a1a] text-[#444]'
+                }`}>
+                  {EVENT_ICONS[ev.type] || ev.type.toUpperCase()}
+                </span>
+                <span className="font-body text-[#555]">{ev.playerName}</span>
+                <span className="font-mono text-[#333] text-[10px] ml-auto">{teamName}</span>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
@@ -157,7 +169,7 @@ export default function Index() {
     if (!liveMatches.length) return;
     const match = liveMatches[rnd(0, liveMatches.length - 1)];
     const event = generateLiveEvent(match);
-    const now = new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const now = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
     setLiveLog(prev => [{ id: Date.now(), text: event, time: now }, ...prev.slice(0, 24)]);
     setTicker(t => t + 1);
   }, [matches]);
@@ -165,14 +177,14 @@ export default function Index() {
   const tickMatches = useCallback(() => {
     setMatches(prev => prev.map(m => {
       if (m.status !== 'live') return m;
-      const newMinute = Math.min(m.minute + 1, 90);
+      const newMinute = Math.min(m.minute + 1, 50);
       let newHomeScore = m.homeScore;
       let newAwayScore = m.awayScore;
-      if (Math.random() < 0.04) {
+      if (Math.random() < 0.035) {
         if (Math.random() > 0.5) newHomeScore++;
         else newAwayScore++;
       }
-      const newStatus: Match['status'] = newMinute >= 90 ? 'finished' : 'live';
+      const newStatus: Match['status'] = newMinute >= 50 ? 'finished' : 'live';
       return { ...m, minute: newMinute, homeScore: newHomeScore, awayScore: newAwayScore, status: newStatus };
     }));
   }, []);
@@ -191,23 +203,23 @@ export default function Index() {
     ...liveMatches.map(m => {
       const h = getTeam(m.homeTeamId);
       const a = getTeam(m.awayTeamId);
-      return `● LIVE ${h?.shortName} ${m.homeScore}:${m.awayScore} ${a?.shortName} (${m.minute}')`;
+      return `LIVE ${h?.shortName} ${m.homeScore}:${m.awayScore} ${a?.shortName} ${m.minute}'`;
     }),
     ...finishedMatches.slice(0, 5).map(m => {
       const h = getTeam(m.homeTeamId);
       const a = getTeam(m.awayTeamId);
-      return `✓ ${h?.shortName} ${m.homeScore}:${m.awayScore} ${a?.shortName}`;
+      return `FT ${h?.shortName} ${m.homeScore}:${m.awayScore} ${a?.shortName}`;
     }),
-    '— USL D1 · D2 · 32 КОМАНДЫ · СЕЗОН 2025 —',
+    'USL D1 / D2 · 32 CLUBS · SEASON 2025',
   ];
 
   return (
     <div className="min-h-screen bg-[#020202] font-body scan-effect">
 
-      {/* TICKER TAPE */}
+      {/* TICKER */}
       <div className="bg-[#00f6ac] h-9 overflow-hidden flex items-center select-none">
         <div className="bg-[#020202] text-[#00f6ac] font-display text-xs font-bold px-4 h-full flex items-center shrink-0 z-10 tracking-[0.2em] border-r border-[#00f6ac33]">
-          USL LIVE
+          USL
         </div>
         <div className="overflow-hidden flex-1 relative">
           <div className="flex gap-16 whitespace-nowrap animate-ticker" key={ticker % 10}>
@@ -237,7 +249,6 @@ export default function Index() {
             </div>
           </div>
 
-          {/* Desktop Nav */}
           <nav className="hidden md:flex items-center gap-0.5">
             {NAV_ITEMS.map(item => (
               <button
@@ -296,13 +307,13 @@ export default function Index() {
           <div className="animate-slide-up">
             <div className="flex flex-wrap items-center gap-4 mb-8">
               <h1 className="font-display text-4xl md:text-5xl font-bold text-white tracking-wider">
-                ЛАЙВ <span style={{ color: '#00f6ac', textShadow: '0 0 30px #00f6ac44' }}>МАТЧИ</span>
+                LIVE <span style={{ color: '#00f6ac', textShadow: '0 0 30px #00f6ac44' }}>MATCHES</span>
               </h1>
               {liveMatches.length > 0 && (
                 <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/30 px-3 py-1.5">
                   <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
                   <span className="font-mono text-red-400 text-xs font-bold tracking-wide">
-                    {liveMatches.length} ИДУТ СЕЙЧАС
+                    {liveMatches.length} IN PROGRESS
                   </span>
                 </div>
               )}
@@ -314,7 +325,7 @@ export default function Index() {
                   <div>
                     <div className="flex items-center gap-2 font-mono text-[10px] tracking-[0.3em] text-[#00f6ac] mb-3">
                       <span className="w-1.5 h-1.5 rounded-full bg-[#00f6ac] animate-pulse" />
-                      В ЭФИРЕ
+                      ON AIR
                     </div>
                     <div className="space-y-2">
                       {liveMatches.map(match => (
@@ -331,7 +342,7 @@ export default function Index() {
 
                 {upcomingMatches.length > 0 && (
                   <div>
-                    <div className="font-mono text-[10px] tracking-[0.3em] text-[#444] mb-3">СКОРО</div>
+                    <div className="font-mono text-[10px] tracking-[0.3em] text-[#444] mb-3">UPCOMING</div>
                     <div className="space-y-2">
                       {upcomingMatches.map(match => (
                         <MatchCard key={match.id} match={match} expanded={false} onToggle={() => {}} />
@@ -342,7 +353,7 @@ export default function Index() {
 
                 {finishedMatches.length > 0 && (
                   <div>
-                    <div className="font-mono text-[10px] tracking-[0.3em] text-[#333] mb-3">ЗАВЕРШЕНЫ</div>
+                    <div className="font-mono text-[10px] tracking-[0.3em] text-[#333] mb-3">FINISHED</div>
                     <div className="space-y-2">
                       {finishedMatches.slice(0, 6).map(match => (
                         <MatchCard key={match.id} match={match} expanded={false} onToggle={() => {}} />
@@ -357,21 +368,21 @@ export default function Index() {
                 <div className="border-b border-[#1a1a1a] p-4 flex items-center justify-between shrink-0">
                   <div className="flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-[#00f6ac] animate-pulse" />
-                    <span className="font-display text-xs tracking-[0.25em] text-[#00f6ac]">ПРЯМОЙ ЭФИР</span>
+                    <span className="font-display text-xs tracking-[0.25em] text-[#00f6ac]">LIVE FEED</span>
                   </div>
                   <span className="font-mono text-[#222] text-xs">{liveLog.length}</span>
                 </div>
-                <div className="flex-1 overflow-y-auto p-4 space-y-0 min-h-[400px] max-h-[600px]">
+                <div className="flex-1 overflow-y-auto p-4 min-h-[400px] max-h-[600px]">
                   {liveLog.length === 0 ? (
                     <div className="text-[#222] font-mono text-xs text-center mt-16">
-                      <div className="text-2xl mb-3">⚽</div>
-                      Ожидание событий...
+                      <div className="text-2xl mb-3">—</div>
+                      Waiting for events...
                     </div>
                   ) : (
                     liveLog.map(ev => (
                       <div
                         key={ev.id}
-                        className="flex items-start gap-3 py-2.5 border-b border-[#0d0d0d] first:border-t-0 animate-fade-in"
+                        className="flex items-start gap-3 py-2.5 border-b border-[#0d0d0d] animate-fade-in"
                       >
                         <span className="font-mono text-[#2a2a2a] text-[10px] shrink-0 mt-0.5 w-16">{ev.time}</span>
                         <span className="font-body text-[#888] text-xs leading-relaxed">{ev.text}</span>
@@ -389,7 +400,7 @@ export default function Index() {
           <div className="animate-slide-up">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
               <h1 className="font-display text-4xl md:text-5xl font-bold text-white tracking-wider">
-                СТАТИ<span style={{ color: '#00f6ac' }}>СТИКА</span>
+                STATI<span style={{ color: '#00f6ac' }}>STICS</span>
               </h1>
               <div className="flex gap-1">
                 {(['D1', 'D2'] as Division[]).map(d => (
@@ -410,7 +421,7 @@ export default function Index() {
 
             <div className="mb-10">
               <div className="font-mono text-[10px] tracking-[0.3em] text-[#00f6ac] mb-4">
-                ТУРНИРНАЯ ТАБЛИЦА · {statsDiv}
+                STANDINGS · {statsDiv}
               </div>
               <div className="grid md:grid-cols-2 gap-4">
                 {(['A', 'B', 'C', 'D'] as const).map(group => {
@@ -420,13 +431,13 @@ export default function Index() {
                   return (
                     <div key={group} className="bg-[#0a0a0a] border border-[#1a1a1a] overflow-hidden">
                       <div className="border-b border-[#1a1a1a] px-4 py-2.5 bg-[#0d0d0d]">
-                        <span className="font-display text-xs tracking-[0.3em] text-[#555]">ГРУППА {group}</span>
+                        <span className="font-display text-xs tracking-[0.3em] text-[#555]">GROUP {group}</span>
                       </div>
                       <table className="w-full">
                         <thead>
                           <tr className="border-b border-[#0f0f0f]">
-                            {['#', 'Команда', 'И', 'В', 'Н', 'П', 'ГФ', 'ГП', 'О'].map(h => (
-                              <th key={h} className={`py-2 px-2 font-mono text-[10px] text-[#2a2a2a] font-normal ${h === 'Команда' ? 'text-left px-3' : 'text-center'} ${h === '#' ? 'pl-4' : ''} ${h === 'О' ? 'text-[#00f6ac]' : ''}`}>{h}</th>
+                            {['#', 'Club', 'P', 'W', 'D', 'L', 'GF', 'GA', 'Pts'].map(h => (
+                              <th key={h} className={`py-2 px-2 font-mono text-[10px] text-[#2a2a2a] font-normal ${h === 'Club' ? 'text-left px-3' : 'text-center'} ${h === '#' ? 'pl-4' : ''} ${h === 'Pts' ? 'text-[#00f6ac]' : ''}`}>{h}</th>
                             ))}
                           </tr>
                         </thead>
@@ -435,12 +446,9 @@ export default function Index() {
                             <tr key={team.id} className={`border-b border-[#0a0a0a] hover:bg-[#0f0f0f] transition-colors ${idx === 0 ? 'bg-[#00f6ac08]' : ''}`}>
                               <td className="py-2.5 pl-4 pr-2 font-mono text-[#2a2a2a] text-xs">{idx + 1}</td>
                               <td className="py-2.5 px-3">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-base">{team.logo}</span>
-                                  <div>
-                                    <div className={`font-body text-xs font-medium ${idx === 0 ? 'text-[#00f6ac]' : 'text-white'}`}>{team.name}</div>
-                                    <div className="font-mono text-[#222] text-[9px]">{team.city}</div>
-                                  </div>
+                                <div>
+                                  <div className={`font-body text-xs font-medium ${idx === 0 ? 'text-[#00f6ac]' : 'text-white'}`}>{team.name}</div>
+                                  <div className="font-mono text-[#222] text-[9px]">{team.state}</div>
                                 </div>
                               </td>
                               <td className="py-2.5 px-2 text-center font-mono text-[#333] text-xs">{team.wins + team.draws + team.losses}</td>
@@ -464,20 +472,23 @@ export default function Index() {
 
             <div>
               <div className="font-mono text-[10px] tracking-[0.3em] text-[#00f6ac] mb-4">
-                БОМБАРДИРЫ · {statsDiv}
+                TOP SCORERS · {statsDiv}
               </div>
               <div className="bg-[#0a0a0a] border border-[#1a1a1a] overflow-x-auto">
                 <table className="w-full">
                   <thead>
                     <tr className="border-b border-[#111]">
-                      {['#', 'Игрок', 'Команда', 'Поз', 'Г', 'П', 'Г+П', 'ЖК', 'Мин', 'KPI'].map(h => (
-                        <th key={h} className={`py-3 px-3 font-mono text-[10px] text-[#2a2a2a] font-normal ${['#', 'Игрок', 'Команда', 'Поз'].includes(h) ? 'text-left' : 'text-center'} ${h === 'Г' || h === 'KPI' ? 'text-[#00f6ac]' : ''}`}>{h}</th>
+                      {['#', 'Player', 'Club', 'Pos', 'G', 'A', 'G+A', 'YC', 'Min', 'KPI'].map(h => (
+                        <th key={h} className={`py-3 px-3 font-mono text-[10px] text-[#2a2a2a] font-normal ${['#', 'Player', 'Club', 'Pos'].includes(h) ? 'text-left' : 'text-center'} ${h === 'G' || h === 'KPI' ? 'text-[#00f6ac]' : ''}`}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {PLAYERS
-                      .filter(p => getTeam(p.teamId)?.division === statsDiv)
+                      .filter(p => {
+                        const team = getTeam(p.teamId);
+                        return team?.division === statsDiv;
+                      })
                       .sort((a, b) => b.goals - a.goals)
                       .map((player, idx) => {
                         const team = getTeam(player.teamId);
@@ -490,10 +501,7 @@ export default function Index() {
                             <td className="py-3 px-3 font-mono text-[#2a2a2a] text-xs">{idx + 1}</td>
                             <td className="py-3 px-3 font-body text-white font-medium text-sm">{player.name}</td>
                             <td className="py-3 px-3">
-                              <div className="flex items-center gap-1.5">
-                                <span className="text-sm">{team?.logo}</span>
-                                <span className="font-mono text-[#444] text-xs">{team?.shortName}</span>
-                              </div>
+                              <span className="font-mono text-[#444] text-xs">{team?.shortName}</span>
                             </td>
                             <td className="py-3 px-3">
                               <span className="font-mono text-xs font-bold" style={{ color: posColors[player.position] }}>
@@ -533,10 +541,10 @@ export default function Index() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
               <div>
                 <h1 className="font-display text-4xl md:text-5xl font-bold text-white tracking-wider">
-                  РАСПИ<span style={{ color: '#00f6ac' }}>САНИЕ</span>
+                  SCHE<span style={{ color: '#00f6ac' }}>DULE</span>
                 </h1>
                 <p className="font-mono text-[#333] text-xs mt-1 tracking-wide">
-                  ОБНОВЛЯЕТСЯ КАЖДЫЕ СУТКИ · ГОРИЗОНТ 24Ч
+                  UPDATED DAILY · 24H HORIZON · KICKOFFS ON THE HOUR
                 </p>
               </div>
               <div className="flex gap-1">
@@ -569,10 +577,10 @@ export default function Index() {
                   <div key={group} className="bg-[#0a0a0a] border border-[#1a1a1a]">
                     <div className="border-b border-[#1a1a1a] px-4 py-3 flex items-center justify-between">
                       <span className="font-display text-sm tracking-[0.2em] text-white">
-                        ГРУППА {group}
+                        GROUP {group}
                       </span>
                       <span className="font-mono text-[10px] text-[#00f6ac]">
-                        {groupMatches.filter(m => m.status === 'live').length} LIVE
+                        {groupMatches.filter(m => m.status === 'live').length > 0 ? 'LIVE' : ''}
                       </span>
                     </div>
                     <div className="divide-y divide-[#0d0d0d]">
@@ -600,7 +608,6 @@ export default function Index() {
                             </div>
                             <div className="flex-1 flex items-center justify-between gap-2 min-w-0">
                               <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                                <span>{home?.logo}</span>
                                 <span className="font-body text-xs text-white truncate">{home?.name}</span>
                               </div>
                               <div className="shrink-0 font-display text-sm font-bold w-14 text-center">
@@ -614,7 +621,6 @@ export default function Index() {
                               </div>
                               <div className="flex items-center gap-1.5 min-w-0 flex-1 justify-end">
                                 <span className="font-body text-xs text-white truncate text-right">{away?.name}</span>
-                                <span>{away?.logo}</span>
                               </div>
                             </div>
                           </div>
@@ -632,16 +638,16 @@ export default function Index() {
         {activeSection === 'projects' && (
           <div className="animate-slide-up">
             <h1 className="font-display text-4xl md:text-5xl font-bold text-white tracking-wider mb-8">
-              ПРО<span style={{ color: '#00f6ac' }}>ЕКТЫ</span>
+              PROJ<span style={{ color: '#00f6ac' }}>ECTS</span>
             </h1>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {[
-                { title: 'USL Academy', desc: 'Молодёжная академия лиги — воспитание талантов будущего', icon: 'GraduationCap', tag: 'ОБРАЗОВАНИЕ' },
-                { title: 'USL Analytics', desc: 'Платформа AI-аналитики данных — оценка игроков в реальном времени', icon: 'Brain', tag: 'ТЕХНОЛОГИИ' },
-                { title: 'USL Media', desc: 'Трансляции и контент — официальный медиапартнёр лиги', icon: 'Tv2', tag: 'МЕДИА' },
-                { title: 'USL Fan Zone', desc: 'Интерактивное сообщество болельщиков со статистикой и прогнозами', icon: 'Users', tag: 'СООБЩЕСТВО' },
-                { title: 'USL Pro Scout', desc: 'Система скаутинга для клубов и агентов — поиск новых талантов', icon: 'Search', tag: 'СКАУТИНГ' },
-                { title: 'USL Cup', desc: 'Финальный турнир лучших команд по итогам сезона', icon: 'Trophy', tag: 'ТУРНИР' },
+                { title: 'USL Academy', desc: 'Youth development program connecting clubs with the next generation of American soccer talent.', icon: 'GraduationCap', tag: 'DEVELOPMENT' },
+                { title: 'USL Analytics', desc: 'Advanced performance data platform providing clubs with in-depth player and team metrics.', icon: 'BarChart2', tag: 'TECHNOLOGY' },
+                { title: 'USL Media', desc: 'Official broadcast and content partner — delivering match coverage across all platforms.', icon: 'Tv2', tag: 'MEDIA' },
+                { title: 'USL Community', desc: 'Fan engagement initiative bringing supporters closer to the clubs and the game.', icon: 'Users', tag: 'COMMUNITY' },
+                { title: 'USL Pro Scout', desc: 'Scouting network connecting clubs and agents for talent identification across the country.', icon: 'Search', tag: 'SCOUTING' },
+                { title: 'USL Cup', desc: 'Season-end knockout tournament featuring the top club from each group across both divisions.', icon: 'Trophy', tag: 'TOURNAMENT' },
               ].map((proj, i) => (
                 <div
                   key={i}
@@ -656,7 +662,7 @@ export default function Index() {
                   <h3 className="font-display text-lg font-bold text-white tracking-wide mb-2">{proj.title}</h3>
                   <p className="font-body text-[#444] text-sm leading-relaxed">{proj.desc}</p>
                   <div className="mt-5 flex items-center gap-2 text-[#333] text-xs font-mono group-hover:text-[#00f6ac] transition-all group-hover:gap-3">
-                    <span>ПОДРОБНЕЕ</span>
+                    <span>LEARN MORE</span>
                     <Icon name="ArrowRight" size={12} />
                   </div>
                 </div>
@@ -669,24 +675,24 @@ export default function Index() {
         {activeSection === 'about' && (
           <div className="animate-slide-up">
             <h1 className="font-display text-4xl md:text-5xl font-bold text-white tracking-wider mb-8">
-              О <span style={{ color: '#00f6ac' }}>ЛИГЕ</span>
+              ABOUT <span style={{ color: '#00f6ac' }}>USL</span>
             </h1>
             <div className="grid lg:grid-cols-2 gap-6">
               <div className="space-y-4">
                 <div className="bg-[#0a0a0a] border border-[#1a1a1a] p-6">
-                  <div className="font-mono text-[10px] tracking-[0.3em] text-[#00f6ac] mb-4">МИССИЯ</div>
+                  <div className="font-mono text-[10px] tracking-[0.3em] text-[#00f6ac] mb-4">MISSION</div>
                   <p className="font-body text-[#666] leading-relaxed text-sm">
-                    Universal Soccer League — передовая футбольная платформа нового поколения. 
-                    Мы объединяем команды из разных городов в конкурентные дивизионы с 
-                    прозрачной системой результатов и лайв-трансляциями каждого матча в режиме 24/7.
+                    Universal Soccer League is a professional soccer competition built on transparency, competition, 
+                    and development. With two divisions across 32 clubs representing states and districts 
+                    throughout the USA, USL provides a structured platform for clubs to compete at the highest level.
                   </p>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   {[
-                    { value: '32', label: 'Команды' },
-                    { value: '2', label: 'Дивизиона' },
-                    { value: '8', label: 'Групп' },
-                    { value: '24/7', label: 'Матчи идут' },
+                    { value: '32', label: 'Clubs' },
+                    { value: '2', label: 'Divisions' },
+                    { value: '8', label: 'Groups' },
+                    { value: '480+', label: 'Matches per season' },
                   ].map((stat, i) => (
                     <div key={i} className="bg-[#0a0a0a] border border-[#1a1a1a] p-5 text-center">
                       <div className="font-display text-3xl font-bold" style={{ color: '#00f6ac' }}>{stat.value}</div>
@@ -697,10 +703,10 @@ export default function Index() {
               </div>
               <div className="space-y-3">
                 {[
-                  { title: 'Формат соревнований', desc: 'Два дивизиона по 16 команд, разделённых на 4 группы. Матчи проходят круглосуточно с автогенерацией результатов и событий.' },
-                  { title: 'Система очков', desc: 'Победа — 3 очка, ничья — 1, поражение — 0. Лучшие команды из каждой группы попадают в финальный турнир — USL Cup.' },
-                  { title: 'Статистика и KPI', desc: 'Каждый игрок имеет персональный KPI рейтинг, рассчитанный на основе голов, передач, отборов и других показателей.' },
-                  { title: 'Лайв платформа', desc: 'Все матчи в реальном времени с полной статистикой, таблицей владения мячом, угловыми и лентой событий.' },
+                  { title: 'Competition Format', desc: 'Two divisions of 16 clubs each, divided into four groups of four. Each group stage runs continuously, with matches scheduled on the hour throughout the day.' },
+                  { title: 'Points System', desc: 'Win — 3 points, Draw — 1 point, Loss — 0 points. Group leaders advance to the USL Cup knockout stage at the end of the season.' },
+                  { title: 'Player KPI', desc: 'Every registered player receives a performance index calculated from goals, assists, defensive actions, and minutes played per 90.' },
+                  { title: 'Live Coverage', desc: 'Every match is covered in real time with full statistics, possession tracking, shot counts, and a continuous event feed.' },
                 ].map((item, i) => (
                   <div key={i} className="bg-[#0a0a0a] border border-[#1a1a1a] p-5 flex gap-4">
                     <div className="w-0.5 bg-[#00f6ac] shrink-0" />
@@ -719,16 +725,16 @@ export default function Index() {
         {activeSection === 'news' && (
           <div className="animate-slide-up">
             <h1 className="font-display text-4xl md:text-5xl font-bold text-white tracking-wider mb-8">
-              НО<span style={{ color: '#00f6ac' }}>ВОСТИ</span>
+              SPORT<span style={{ color: '#00f6ac' }}>S NEWS</span>
             </h1>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {[
-                { date: 'Сегодня, 14:32', tag: 'МАТЧИ', title: 'Phoenix FC разгромил Blue Ocean 4:0', preview: 'Уверенная победа закрепила лидерство Phoenix FC в группе B первого дивизиона.' },
-                { date: 'Сегодня, 11:15', tag: 'ИГРОКИ', title: 'Д. Крылов — лучший игрок недели USL', preview: 'Нападающий Gold Rush с 12 голами и 8 передачами уверенно лидирует в системе гол+пас.' },
-                { date: 'Вчера', tag: 'ЛИГА', title: 'Анонс USL Cup: финал стартует через месяц', preview: 'Лучшие команды каждой группы встретятся в плей-офф за главный приз сезона USL.' },
-                { date: 'Вчера', tag: 'РЕКОРДЫ', title: 'Т. Максимов — 15 голов за сезон в D2', preview: 'Форвард King Lions установил новый рекорд результативности в истории второго дивизиона.' },
-                { date: '2 дня назад', tag: 'ТРАНСФЕРЫ', title: 'Storm FC укрепили полузащиту перед финишем', preview: 'Московский клуб добавил двух новых игроков в рамках зимнего трансферного окна.' },
-                { date: '3 дня назад', tag: 'ТЕХНОЛОГИИ', title: 'USL запускает VAR для матчей D1', preview: 'С нового раунда видеоповтор доступен для спорных решений арбитра в первом дивизионе.' },
+                { date: 'Today', tag: 'FIFA', title: 'FIFA raises prize fund for 2026 World Cup to record $1 billion', preview: 'Host nations USA, Canada and Mexico set to benefit from expanded tournament revenue.' },
+                { date: 'Today', tag: 'PREMIER LEAGUE', title: 'Manchester City manager extends contract through 2027', preview: 'Club confirms long-term commitment with squad rebuild planned for summer window.' },
+                { date: 'Yesterday', tag: 'CHAMPIONS LEAGUE', title: 'Real Madrid through to semi-finals after extra time', preview: 'Late goal in the 118th minute sealed a dramatic aggregate win at the Bernabeu.' },
+                { date: 'Yesterday', tag: 'MLS', title: 'Inter Miami top the Eastern Conference standings', preview: 'Five-game winning run puts Miami three points clear heading into the international break.' },
+                { date: '2 days ago', tag: 'TRANSFERS', title: 'Juventus confirm €85m signing of Brazilian midfielder', preview: 'Deal agreed ahead of summer, player to join on July 1 on a four-year contract.' },
+                { date: '3 days ago', tag: 'BUNDESLIGA', title: 'Bayern Munich clinch title with four games remaining', preview: 'A 3-0 win over Dortmund mathematically confirmed a 13th consecutive Bundesliga crown.' },
               ].map((news, i) => (
                 <div
                   key={i}
@@ -745,7 +751,7 @@ export default function Index() {
                     </h3>
                     <p className="font-body text-[#333] text-xs leading-relaxed">{news.preview}</p>
                     <div className="mt-4 flex items-center gap-1.5 text-[#222] text-xs font-mono group-hover:text-[#00f6ac] transition-all group-hover:gap-2.5">
-                      <span>ЧИТАТЬ</span>
+                      <span>READ MORE</span>
                       <Icon name="ChevronRight" size={11} />
                     </div>
                   </div>
@@ -766,7 +772,7 @@ export default function Index() {
           </div>
           <div className="flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-[#00f6ac] animate-pulse" />
-            <span className="font-mono text-[#00f6ac] text-xs tracking-wide">СИСТЕМА РАБОТАЕТ В РЕАЛЬНОМ ВРЕМЕНИ</span>
+            <span className="font-mono text-[#00f6ac] text-xs tracking-wide">LIVE PLATFORM</span>
           </div>
         </div>
       </footer>
